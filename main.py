@@ -1,24 +1,44 @@
-import telebot
-from telebot import types
+import os
 import random
+from aiogram import Bot, types
+from aiogram.dispatcher import Dispatcher
+from aiogram.utils import executor
 
-bot = telebot.TeleBot("Your token")
+bot = Bot(token="6888013125:AAGnyqNtcp8o9lZ7_-PBFdGDEFnF9H68lRk")
+dp = Dispatcher(bot)
 
-@bot.message_handler(commands=["start"])
-def start(message):
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(types.KeyboardButton("Рандомное число"))
-    bot.send_message(message.chat.id, "Выберите действие", reply_markup=markup)
+sticker_folder_path = r"C:\Users\student.ITSTEP\tgbot_karachevtsev\Stikers"
 
-@bot.message_handler(commands=["hello"])
-def hello(message):
-    bot.send_message(message.chat.id, "Привет")
+sticker_files = [f for f in os.listdir(sticker_folder_path) if os.path.isfile(os.path.join(sticker_folder_path, f))]
 
+@dp.message_handler(commands=["start"])
+async def process_start_command(message: types.Message):
+    kb = [
+        [types.KeyboardButton(text="Рандомное число")],
+        [types.KeyboardButton(text="Рандомный стикер")],
+    ]
+    keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+    await message.reply("Привет, я бот в тг", reply_markup=keyboard)
 
-@bot.message_handler(commands=["random"])
-def randomize(message):
-    num = random.randint(1, 100)
-    bot.send_message(message.chat.id, str(num))
+@dp.message_handler(lambda message: message.text == "Рандомный стикер")
+async def process_random_sticker(message: types.Message):
+    if sticker_files:
+        random_sticker_file = random.choice(sticker_files)
+        sticker_path = os.path.join(sticker_folder_path, random_sticker_file)
+        with open(sticker_path, "rb") as sticker:
+            await bot.send_sticker(message.from_user.id, sticker)
+    else:
+        await bot.send_message(message.from_user.id, "В папке нет фотографий стикеров.")
 
+@dp.message_handler(lambda message: message.text == "Рандомное число")
+async def process_random_number(message: types.Message):
+    import random
+    a = random.randint(1, 100)
+    await bot.send_message(message.from_user.id, str(a))
 
-bot.polling(none_stop=True)
+@dp.message_handler()
+async def echo_message(message: types.Message):
+    await bot.send_message(message.from_user.id, message.text)
+
+if __name__ == "__main__":
+    executor.start_polling(dp)
